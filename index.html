@@ -1,11 +1,408 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moody-vibes-</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Moodify — Mood-based Music Player</title>
+  <style>
+    /* ====== Reset ====== */
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body,#app{height:100%}
+    body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;color:#0f172a;background:linear-gradient(180deg,#0f172a 0%,#071228 100%);-webkit-font-smoothing:antialiased}
+
+    /* ====== Layout ====== */
+    .container{max-width:1200px;margin:28px auto;padding:24px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:16px;box-shadow:0 8px 30px rgba(2,6,23,0.7);display:grid;grid-template-columns:360px 1fr;gap:24px}
+
+    header.app-header{display:flex;align-items:center;gap:16px;margin-bottom:10px}
+    header h1{font-size:20px;color:#e6f3ff}
+    header p{font-size:13px;color:#93c5fd;opacity:0.9}
+
+    /* ====== Left panel ====== */
+    .panel{padding:18px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.01),rgba(255,255,255,0.005));}
+    .mood-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+    .mood-btn{flex:1 1 calc(50% - 10px);display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:all .18s}
+    .mood-btn:hover{transform:translateY(-4px);box-shadow:0 6px 18px rgba(0,0,0,0.5)}
+    .mood-btn.active{background:linear-gradient(90deg,rgba(99,102,241,0.18),rgba(56,189,248,0.08));border-color:rgba(99,102,241,0.35)}
+    .mood-emoji{font-size:20px}
+    .mood-label{font-size:14px;color:#e6f3ff}
+    .mood-desc{font-size:12px;color:#93c5fd;opacity:.8}
+
+    .mini-input{display:flex;gap:8px;margin-top:14px}
+    .mini-input input{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#e6f3ff}
+    .btn {padding:10px 12px;border-radius:10px;border:0;background:linear-gradient(90deg,#7c3aed,#06b6d4);color:white;cursor:pointer}
+
+    .recommend-list{margin-top:14px;display:flex;flex-direction:column;gap:10px;max-height:420px;overflow:auto;padding-right:6px}
+    .track-item{display:flex;gap:12px;align-items:center;padding:8px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);border:1px solid rgba(255,255,255,0.02)}
+    .track-cover{width:56px;height:56px;border-radius:8px;flex-shrink:0;object-fit:cover}
+    .track-meta{flex:1}
+    .track-title{color:#e6f3ff;font-weight:600;font-size:14px}
+    .track-sub{color:#93c5fd;font-size:12px;opacity:.85}
+    .track-actions{display:flex;gap:8px;align-items:center}
+    .small-icon{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;background:rgba(255,255,255,0.02);cursor:pointer}
+
+    /* ====== Right panel ====== */
+    .player-wrap{display:flex;flex-direction:column;gap:14px;padding:22px;border-radius:12px}
+    .now-playing{display:flex;gap:18px;align-items:center}
+    .big-cover{width:220px;height:220px;border-radius:14px;box-shadow:0 20px 40px rgba(2,6,23,0.7);flex-shrink:0;object-fit:cover}
+    .now-info{flex:1}
+    .now-info h2{color:#fff;font-size:20px}
+    .now-info p{color:#93c5fd;font-size:13px;margin-top:6px}
+
+    .controls{display:flex;align-items:center;gap:14px;margin-top:6px}
+    .control-btn{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.03);cursor:pointer}
+    .play-btn{width:64px;height:64px;border-radius:50%;background:linear-gradient(90deg,#7c3aed,#06b6d4);box-shadow:0 10px 30px rgba(99,102,241,0.15);display:grid;place-items:center}
+
+    .progress{margin-top:12px}
+    .progress-bar{height:8px;width:100%;background:rgba(255,255,255,0.04);border-radius:999px;position:relative;cursor:pointer}
+    .progress-fill{height:100%;width:0%;background:linear-gradient(90deg,#7c3aed,#06b6d4);border-radius:999px}
+    .time-row{display:flex;justify-content:space-between;margin-top:6px;color:#93c5fd;font-size:12px}
+
+    .visualizer{width:100%;height:90px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);overflow:hidden}
+
+    .playlist-panel{margin-top:8px;display:flex;gap:8px;align-items:center}
+    .playlist{display:flex;gap:8px;overflow:auto;padding:6px}
+    .pl-item{width:84px;display:flex;flex-direction:column;gap:6px;align-items:center}
+    .pl-item img{width:84px;height:84px;border-radius:8px;object-fit:cover}
+    .pl-item span{font-size:12px;color:#e6f3ff}
+
+    footer{display:flex;justify-content:space-between;align-items:center;margin-top:14px;color:#93c5fd;font-size:13px}
+
+    /* ====== Responsive ====== */
+    @media (max-width:980px){.container{grid-template-columns:1fr}.big-cover{width:180px;height:180px}.container{padding:18px}}
+  </style>
 </head>
 <body>
-    <P>Welcome to Moody-vibes-</P>
+  <div id="app">
+    <div class="container" role="application" aria-label="Moodify music player">
+      <div>
+        <div class="panel">
+          <div class="app-header">
+            <div>
+              <h1>Moodify</h1>
+              <p>Pick a mood — we’ll build a vibe.</p>
+            </div>
+          </div>
+
+          <div>
+            <strong style="color:#c7e3ff">Choose mood</strong>
+            <div class="mood-grid" id="moodGrid">
+              <!-- mood buttons injected -->
+            </div>
+
+            <div style="margin-top:10px">
+              <strong style="color:#c7e3ff">Type a quick mood-line</strong>
+              <div class="mini-input">
+                <input id="moodText" placeholder="e.g. I feel relaxed and sleepy..." aria-label="mood input" />
+                <button class="btn" id="moodFromText">Detect</button>
+              </div>
+            </div>
+
+            <div style="margin-top:12px;display:flex;gap:8px;align-items:center;justify-content:space-between">
+              <strong style="color:#c7e3ff">Recommendations</strong>
+              <small style="color:#93c5fd">Based on selected mood</small>
+            </div>
+
+            <div class="recommend-list" id="recommendList" aria-live="polite">
+              <!-- items injected -->
+            </div>
+          </div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <div class="panel">
+          <strong style="color:#c7e3ff">Favorites</strong>
+          <div id="favoritesList" style="margin-top:10px;display:flex;flex-direction:column;gap:8px;max-height:200px;overflow:auto"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="player-wrap panel">
+          <div class="now-playing">
+            <img class="big-cover" id="bigCover" src="https://picsum.photos/seed/default/400/400" alt="cover" />
+            <div class="now-info">
+              <h2 id="nowTitle">Select a mood — then a track</h2>
+              <p id="nowArtist">Moodify — Smart playlists</p>
+
+              <div class="controls" style="margin-top:14px">
+                <div class="control-btn" id="prevBtn" title="Previous">⏮</div>
+                <div class="control-btn" id="shuffleBtn" title="Shuffle">🔀</div>
+                <div class="play-btn" id="playBtn" title="Play/Pause">▶️</div>
+                <div class="control-btn" id="repeatBtn" title="Repeat">🔁</div>
+                <div class="control-btn" id="nextBtn" title="Next">⏭</div>
+                <div style="flex:1"></div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <input id="volume" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="volume" />
+                  <div class="small-icon" id="favToggle" title="Favorite">❤</div>
+                </div>
+              </div>
+
+              <div class="progress" aria-hidden="false">
+                <div class="progress-bar" id="progressBar" aria-label="progress" role="progressbar">
+                  <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="time-row"><span id="currentTime">0:00</span><span id="totalTime">0:00</span></div>
+              </div>
+            </div>
+          </div>
+
+          <canvas id="vis" class="visualizer"></canvas>
+
+          <div class="playlist-panel">
+            <div style="display:flex;flex-direction:column;gap:8px;flex:1">
+              <strong style="color:#c7e3ff">Playlist</strong>
+              <div class="playlist" id="playlist"></div>
+            </div>
+            <div style="width:220px">
+              <strong style="color:#c7e3ff">Why this track?</strong>
+              <div id="whyBox" style="margin-top:8px;color:#bfe9ff;font-size:13px;min-height:48px">Select a track to see why we recommended it.</div>
+            </div>
+          </div>
+
+          <audio id="audio" crossorigin="anonymous"></audio>
+        </div>
+
+        <footer>
+          <div>Made with ♥ for your project</div>
+          <div style="opacity:.9">Tip: Replace sample mp3 URLs in the code with your own files</div>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ====== Sample track database ====== */
+    const TRACKS = [
+      // Happy / Energetic
+      { id: 'h1', title: 'Sunrise Drive', artist: 'SoundHelix', src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', cover: 'https://picsum.photos/seed/sunrise/400/400', tags: ['happy','energetic','upbeat'] },
+      { id: 'h2', title: 'Feel Good Parade', artist: 'SoundHelix', src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', cover: 'https://picsum.photos/seed/parade/400/400', tags: ['happy','bright','pop'] },
+      { id: 'h3', title: 'Roadtrip Anthem', artist: 'SoundHelix', src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', cover: 'https://picsum.photos/seed/roadtrip/400/400', tags: ['energetic','anthem','upbeat'] },
+      { id: 'h4', title: 'Daylight Bounce', artist: 'SoundHelix', src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3', cover: 'https://picsum.photos/seed/daylight/400/400', tags: ['happy','dance','bright'] },
+
+      // Chill / Relax
+      { id: 'c1', title: 'Late Night Coffee', artist: 'CalmLabs', src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3', cover: 'https://picsum.photos/seed/coffee/400/400', tags: ['chill','calm','ambient'] },
+      { id: 'c2', title: 'Ocean Whisper', artist: 'CalmLabs', src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3', cover: 'https://picsum.photos/seed/ocean/400/400', tags: ['chill','ambient','soft'] },
+      { id: 'c3', title: 'Clouds & Strings', artist: 'CalmLabs', src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3', cover: 'https://picsum.photos/seed/clouds/400/400', tags: ['relax','strings','soft'] },
+      { id: 'c4', title: 'Pillow Talk', artist: 'CalmLabs', src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3', cover: 'https://picsum.photos/seed/pillow/400/400', tags: ['chill','sleepy','soft'] },
+
+      // Sad / Melancholic
+      { id: 's1', title: 'Rain On Windows', artist: 'BlueNote', src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3', cover: 'https://picsum.photos/seed/rain/400/400', tags: ['sad','melancholic','soft'] },
+      { id: 's2', title: 'Echoes', artist: 'BlueNote', src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3', cover: 'https://picsum.photos/seed/echoes/400/400', tags: ['sad','ambient','reflective'] },
+      { id: 's3', title: 'Lonely Street', artist: 'BlueNote', src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3', cover: 'https://picsum.photos/seed/lonely/400/400', tags: ['melancholic','slow','acoustic'] },
+      { id: 's4', title: 'Fading Lights', artist: 'BlueNote', src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3', cover: 'https://picsum.photos/seed/fade/400/400', tags: ['sad','soft','piano'] },
+
+      // Energetic / Workout
+      { id: 'e1', title: 'Pulse Racer', artist: 'GymBeats', src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3', cover: 'https://picsum.photos/seed/pulse/400/400', tags: ['energetic','pump','dance'] },
+      { id: 'e2', title: 'High Voltage', artist: 'GymBeats', src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3', cover: 'https://picsum.photos/seed/voltage/400/400', tags: ['energetic','electronic','fast'] },
+      { id: 'e3', title: 'Edge of Motion', artist: 'GymBeats', src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3', cover: 'https://picsum.photos/seed/motion/400/400', tags: ['energetic','rock','anthem'] },
+      { id: 'e4', title: 'Run the Night', artist: 'GymBeats', src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3', cover: 'https://picsum.photos/seed/run/400/400', tags: ['energetic','dance','upbeat'] },
+    ];
+
+    /* ====== Mood definitions ====== */
+    const MOODS = [
+      { id:'happy', emoji:'😊', label:'Happy', desc:'Upbeat, bright, feel-good' },
+      { id:'chill', emoji:'😌', label:'Chill', desc:'Calm, ambient, relaxed' },
+      { id:'sad', emoji:'😢', label:'Sad', desc:'Melancholic, soft' },
+      { id:'energetic', emoji:'💥', label:'Energetic', desc:'Powerful, pumped' }
+    ];
+
+    const moodToTags = {
+      happy:['happy','upbeat','bright','pop'],
+      chill:['chill','calm','ambient','relax','soft','sleepy'],
+      sad:['sad','melancholic','slow','acoustic','piano','reflective'],
+      energetic:['energetic','pump','dance','fast','rock','anthem']
+    };
+
+    /* ====== State ====== */
+    const state = { currentMood: null, playlist: [], index: 0, shuffled:false, repeat:false, audioReady:false };
+    const audio = document.getElementById('audio');
+    const playBtn = document.getElementById('playBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const shuffleBtn = document.getElementById('shuffleBtn');
+    const repeatBtn = document.getElementById('repeatBtn');
+    const favToggle = document.getElementById('favToggle');
+    const progressBar = document.getElementById('progressBar');
+    const progressFill = document.getElementById('progressFill');
+    const currentTimeEl = document.getElementById('currentTime');
+    const totalTimeEl = document.getElementById('totalTime');
+    const nowTitle = document.getElementById('nowTitle');
+    const nowArtist = document.getElementById('nowArtist');
+    const bigCover = document.getElementById('bigCover');
+    const playlistEl = document.getElementById('playlist');
+    const recommendList = document.getElementById('recommendList');
+    const favoritesList = document.getElementById('favoritesList');
+    const whyBox = document.getElementById('whyBox');
+
+    /* ====== Utility helpers ====== */
+    const $ = (q,el=document)=>el.querySelector(q);
+    const $$ = (q,el=document)=>Array.from(el.querySelectorAll(q));
+
+    function formatTime(s){ if(isNaN(s)) return '0:00'; const m=Math.floor(s/60); const sec=Math.floor(s%60).toString().padStart(2,'0'); return `${m}:${sec}` }
+
+    /* ====== Mood UI ====== */
+    function renderMoods(){
+      const grid = document.getElementById('moodGrid');
+      grid.innerHTML = '';
+      MOODS.forEach(m=>{
+        const btn = document.createElement('button');
+        btn.className='mood-btn'; btn.setAttribute('data-mood',m.id);
+        btn.innerHTML = `<span class="mood-emoji">${m.emoji}</span><div style="text-align:left"><div class="mood-label">${m.label}</div><div class="mood-desc">${m.desc}</div></div>`;
+        btn.addEventListener('click',()=>selectMood(m.id, btn));
+        grid.appendChild(btn);
+      })
+    }
+
+    function selectMood(moodId, btn=null){
+      state.currentMood = moodId;
+      // ui active
+      $$('.mood-btn').forEach(b=>b.classList.toggle('active', b.dataset.mood===moodId));
+      // build playlist via recommendation
+      state.playlist = recommendTracksForMood(moodId);
+      state.index = 0;
+      renderRecommendations();
+      renderPlaylist();
+      loadTrack(state.index);
+    }
+
+    /* ====== Recommendation engine (simple tag matching + diversity) ====== */
+    function recommendTracksForMood(moodId){
+      const tags = moodToTags[moodId] || [];
+      // Score tracks by matching tags
+      const scored = TRACKS.map(t=>{
+        const score = t.tags.reduce((acc,tag)=> acc + (tags.includes(tag)?1:0), 0);
+        // boost if id starts with mood letter (small diversity hack)
+        const diversity = Math.random()*0.3;
+        return {track:t,score:score+diversity}
+      }).sort((a,b)=>b.score-a.score);
+      // return top 10 (or all) unique
+      return scored.map(s=>s.track).slice(0,12);
+    }
+
+    /* ====== Render lists ====== */
+    function renderRecommendations(){
+      recommendList.innerHTML='';
+      state.playlist.slice(0,6).forEach((t,idx)=>{
+        const item = document.createElement('div'); item.className='track-item';
+        item.innerHTML = `<img class="track-cover" src="${t.cover}" alt="cover"/><div class="track-meta"><div class="track-title">${t.title}</div><div class="track-sub">${t.artist}</div></div><div class="track-actions"><div class="small-icon" data-action="play" data-idx="${idx}" title="Play">▶</div><div class="small-icon" data-action="info" data-id="${t.id}" title="Why">i</div></div>`;
+        item.querySelector('[data-action="play"]').addEventListener('click',()=>{ state.index = idx; loadTrack(state.index); playAudio(); });
+        item.querySelector('[data-action="info"]').addEventListener('click',()=>showWhy(t));
+        recommendList.appendChild(item);
+      })
+    }
+
+    function renderPlaylist(){
+      playlistEl.innerHTML='';
+      state.playlist.forEach((t,idx)=>{
+        const el = document.createElement('div'); el.className='pl-item';
+        el.innerHTML = `<img src="${t.cover}" alt="cover"/><span title="${t.title}">${t.title}</span>`;
+        el.addEventListener('click',()=>{ state.index = idx; loadTrack(idx); playAudio(); });
+        playlistEl.appendChild(el);
+      })
+    }
+
+    /* ====== Favorites ====== */
+    function getFavorites(){ try{ return JSON.parse(localStorage.getItem('moodify.favs')||'[]') }catch(e){return[]} }
+    function saveFavorites(arr){ localStorage.setItem('moodify.favs', JSON.stringify(arr)); renderFavorites() }
+    function toggleFavorite(trackId){ const favs=getFavorites(); const found=favs.includes(trackId); if(found){ saveFavorites(favs.filter(f=>f!==trackId)); } else { saveFavorites([...favs, trackId]); } updateFavUI(); }
+    function updateFavUI(){ const favs=getFavorites(); favToggle.style.opacity = favs.includes(currentTrack().id)?1:0.55; favToggle.title = favs.includes(currentTrack().id)?'Unfavorite':'Favorite'; }
+    function renderFavorites(){ favoritesList.innerHTML=''; const favs=getFavorites(); favs.forEach(id=>{ const t = TRACKS.find(x=>x.id===id); if(!t) return; const el = document.createElement('div'); el.className='track-item'; el.style.cursor='pointer'; el.innerHTML = `<img class="track-cover" src="${t.cover}" alt="cover"/><div class="track-meta"><div class="track-title">${t.title}</div><div class="track-sub">${t.artist}</div></div><div class="track-actions"><div class="small-icon" data-action="play" title="Play">▶</div></div>`; el.querySelector('[data-action="play"]').addEventListener('click',()=>{ // ensure in playlist
+            const pIndex = state.playlist.findIndex(x=>x.id===t.id);
+            if(pIndex>=0){ state.index = pIndex; } else { state.playlist.unshift(t); state.index=0; renderPlaylist(); }
+            loadTrack(state.index); playAudio();
+        }); favoritesList.appendChild(el); }); updateFavUI(); }
+
+    /* ====== Player logic ====== */
+    function currentTrack(){ return state.playlist[state.index] || {id:'',title:'No track',artist:'',src:'',cover:''} }
+
+    function loadTrack(idx){ const t = state.playlist[idx]; if(!t) return; audio.src = t.src; nowTitle.textContent = t.title; nowArtist.textContent = t.artist; bigCover.src = t.cover; updateFavUI(); whyBox.textContent = 'Select "Why" on a recommendation to learn why this track was chosen.'; // reset times
+      audio.load(); state.audioReady=false; setTimeout(()=>{ /* try to prefetch */ },100);
+    }
+
+    function playAudio(){ if(!audio.src) return; audio.play().catch(()=>{}); }
+
+    function pauseAudio(){ audio.pause(); }
+
+    playBtn.addEventListener('click',()=>{
+      if(audio.paused) { playAudio(); } else { pauseAudio(); }
+    });
+
+    prevBtn.addEventListener('click',()=>{
+      if(state.index>0) state.index--; else state.index = state.playlist.length-1; loadTrack(state.index); playAudio();
+    });
+    nextBtn.addEventListener('click',()=>{
+      if(state.shuffled) { state.index = Math.floor(Math.random()*state.playlist.length); } else { state.index = (state.index+1) % state.playlist.length } loadTrack(state.index); playAudio();
+    });
+
+    shuffleBtn.addEventListener('click',()=>{ state.shuffled = !state.shuffled; shuffleBtn.style.opacity = state.shuffled?1:0.6 });
+    repeatBtn.addEventListener('click',()=>{ state.repeat = !state.repeat; repeatBtn.style.opacity = state.repeat?1:0.6 });
+
+    favToggle.addEventListener('click',()=>{ const t = currentTrack(); if(!t.id) return; toggleFavorite(t.id); });
+
+    audio.addEventListener('play',()=>{ playBtn.innerText='⏸'; });
+    audio.addEventListener('pause',()=>{ playBtn.innerText='▶️'; });
+
+    audio.addEventListener('timeupdate',()=>{
+      const pct = (audio.currentTime / (audio.duration || 1)); progressFill.style.width = (pct*100)+'%'; currentTimeEl.textContent = formatTime(audio.currentTime);
+    });
+    audio.addEventListener('loadedmetadata',()=>{ totalTimeEl.textContent = formatTime(audio.duration); state.audioReady=true });
+
+    audio.addEventListener('ended',()=>{
+      if(state.repeat) { playAudio(); } else { nextBtn.click(); }
+    });
+
+    progressBar.addEventListener('click',(e)=>{
+      if(!audio.duration) return; const rect = progressBar.getBoundingClientRect(); const x = e.clientX - rect.left; const pct = x / rect.width; audio.currentTime = pct * audio.duration;
+    });
+
+    document.getElementById('volume').addEventListener('input',e=>{ audio.volume = parseFloat(e.target.value); });
+
+    /* ====== 'Why' explanation generator ====== */
+    function showWhy(t){ const mood = state.currentMood; if(!mood){ whyBox.textContent = 'Pick a mood first to see why this track fits.'; return; }
+      const tags = t.tags || []; const weights = moodToTags[mood] || [];
+      const matches = tags.filter(tag=>weights.includes(tag));
+      const score = matches.length;
+      const suggestions = matches.length ? `Matches: ${matches.join(', ')}` : 'No direct tag match — provides contrast to the mood.';
+      whyBox.textContent = `${t.title} — ${t.artist}. ${suggestions}. Score: ${score}`;
+    }
+
+    /* ====== Mood-from-text (naive) ====== */
+    const moodKeywords = {
+      happy:['happy','joy','excited','good','amazing','great','fun','love'],
+      chill:['relax','calm','sleep','chill','peace','soft','slow'],
+      sad:['sad','down','lonely','depressed','mourn','cry','tear','blue','broken'],
+      energetic:['energy','pump','workout','run','gym','hype','excite','party']
+    };
+    document.getElementById('moodFromText').addEventListener('click',()=>{
+      const txt = document.getElementById('moodText').value.toLowerCase(); if(!txt) return; const scores = {};
+      Object.keys(moodKeywords).forEach(m=>scores[m]=0);
+      Object.keys(moodKeywords).forEach(m=>{ moodKeywords[m].forEach(k=>{ if(txt.includes(k)) scores[m]+=1 }) });
+      const best = Object.entries(scores).sort((a,b)=>b[1]-a[1])[0]; if(!best || best[1]===0){ alert('Could not detect a clear mood — try words like "happy", "relaxed", "sad", "energetic"'); return; }
+      selectMood(best[0]);
+    });
+
+    /* ====== Simple keyboard shortcuts ====== */
+    document.addEventListener('keydown',(e)=>{ if(e.code==='Space'){ e.preventDefault(); if(audio.paused) playAudio(); else pauseAudio(); } if(e.code==='ArrowRight'){ nextBtn.click(); } if(e.code==='ArrowLeft'){ prevBtn.click(); } });
+
+    /* ====== Visualizer using WebAudio API ====== */
+    (function initVisualizer(){
+      const canvas = document.getElementById('vis'); const ctx = canvas.getContext('2d');
+      let audioCtx, analyser, dataArray, source;
+      function resize(){ canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight; }
+      window.addEventListener('resize',resize); resize();
+      function start(){ if(audioCtx) return; audioCtx = new (window.AudioContext || window.webkitAudioContext)(); source = audioCtx.createMediaElementSource(audio); analyser = audioCtx.createAnalyser(); analyser.fftSize = 256; const bufferLength = analyser.frequencyBinCount; dataArray = new Uint8Array(bufferLength); source.connect(analyser); analyser.connect(audioCtx.destination); }
+      function draw(){ requestAnimationFrame(draw); if(!analyser) return; analyser.getByteFrequencyData(dataArray); ctx.clearRect(0,0,canvas.width,canvas.height); const barWidth = canvas.width / dataArray.length; for(let i=0;i<dataArray.length;i++){ const v = dataArray[i]/255; const h = v * canvas.height; const x = i*barWidth; ctx.fillStyle = `rgba(124,58,237,${0.9 - v*0.7})`; ctx.fillRect(x, canvas.height - h, barWidth*0.9, h); } }
+      audio.addEventListener('play',()=>{ if(!audioCtx) start(); if(audioCtx.state==='suspended') audioCtx.resume(); });
+      draw();
+    })();
+
+    /* ====== Init ====== */
+    renderMoods(); renderFavorites(); // pre-select a default (optional):
+    //selectMood('chill');
+
+    // expose for debugging
+    window.Moodify = {TRACKS,MOODS,state};
+  </script>
 </body>
 </html>
+
